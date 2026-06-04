@@ -1,47 +1,65 @@
-from flask import Flask, request, render_template
+import streamlit as st
 import joblib
 
-app = Flask(__name__)
+st.set_page_config(page_title="Book Genre Classifier", page_icon="📚", layout="centered")
 
 model = joblib.load('model.pkl')
 vectorizer = joblib.load('vectorizer.pkl')
 
-@app.route('/', methods=['GET', 'POST'])
-def classify():
-    prediction = None
-    confidence = None
-    mode = None
-    title = None
-    description = None
+st.title("📚 Book Genre Classifier")
+st.caption("Predict a book's genre from its title and/or description — powered by a Support Vector Classifier trained on 52,000+ Goodreads books.")
 
-    if request.method == 'POST':
-        title = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
+st.divider()
 
-        # Combine exactly as training did: title + space + description
-        if description:
+title = st.text_input("Book Title", placeholder="e.g. The Great Gatsby")
+description = st.text_area("Description", placeholder="Paste the book's synopsis or blurb here...", height=150)
+
+if title and description:
+    st.caption("✅ Using title + description — best accuracy")
+elif title:
+    st.caption("ℹ️ Using title only")
+elif description:
+    st.caption("ℹ️ Using description only")
+
+st.divider()
+
+if st.button("🔍 Classify Genre", use_container_width=True):
+    if not title and not description:
+        st.warning("Please enter a title or description before classifying.")
+    else:
+        if title and description:
             text_input = title + ' ' + description
-            mode = 'Title + description'
+        elif description:
+            text_input = description
         else:
             text_input = title
-            mode = 'Title only'
 
-        vectorized = vectorizer.transform([text_input])
-        prediction = model.predict(vectorized)[0]
+        with st.spinner("Classifying..."):
+            vectorized = vectorizer.transform([text_input])
+            prediction = model.predict(vectorized)[0]
 
-        # Confidence score (if your model supports it)
-        try:
-            proba = model.predict_proba(vectorized)[0]
-            confidence = round(max(proba) * 100)
-        except:
-            confidence = None
+            try:
+                proba = model.predict_proba(vectorized)[0]
+                confidence = round(max(proba) * 100)
+            except:
+                confidence = None
 
-    return render_template('index.html',
-                           prediction=prediction,
-                           confidence=confidence,
-                           mode=mode,
-                           title=title,
-                           description=description)
+        st.success(f"**Predicted Genre: {prediction}**")
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        if confidence:
+            st.metric(label="Model Confidence", value=f"{confidence}%")
+            st.progress(confidence / 100)
+
+        st.divider()
+        with st.expander("ℹ️ How this prediction was made"):
+            if title and description:
+                st.write(f"**Input used:** Title + Description")
+            elif description:
+                st.write(f"**Input used:** Description only")
+            else:
+                st.write(f"**Input used:** Title only")
+            st.write(f"**Model:** Support Vector Classifier (linear kernel)")
+            st.write(f"**Vectorizer:** TF-IDF (15,000 features, 1-2 ngrams)")
+
+st.divider()
+st.caption("Built by Hiba · GOMYCODE Certificate Project")
