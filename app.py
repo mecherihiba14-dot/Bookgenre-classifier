@@ -1,10 +1,12 @@
 import streamlit as st
 import joblib
+from langdetect import detect
 
 st.set_page_config(page_title="Book Genre Classifier", page_icon="📚", layout="centered")
 
 model = joblib.load('model.pkl')
 vectorizer = joblib.load('vectorizer.pkl')
+label_encoder = joblib.load('label_encoder.pkl')
 
 st.title("📚 Book Genre Classifier")
 st.caption("Predict a book's genre from its title and/or description — powered by a Support Vector Classifier trained on 52,000+ Goodreads books.")
@@ -14,14 +16,33 @@ st.divider()
 title = st.text_input("Book Title", placeholder="e.g. The Great Gatsby")
 description = st.text_area("Description", placeholder="Paste the book's synopsis or blurb here...", height=150)
 
+try:
+    lang = detect(st.text_input)
+    if lang != 'en':
+        st.warning("⚠️ This app only supports English text. Please enter the title or description in English for accurate results.")
+        st.stop()
+except:
+    pass
+
 if title and description:
     st.caption("✅ Using title + description — best accuracy")
 elif title:
     st.caption("ℹ️ Using title only")
 elif description:
     st.caption("ℹ️ Using description only")
+    
+def clear_inputs():
+    st.session_state.title = ""
+    st.session_state.description = ""
 
 st.divider()
+
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    classify = st.button("🔍 Classify Genre", use_container_width=True, key="classify_btn")
+with col2:
+    st.button("🗑️ Clear", use_container_width=True, on_click=clear_inputs)
 
 if st.button("🔍 Classify Genre", use_container_width=True):
     if not title and not description:
@@ -36,7 +57,7 @@ if st.button("🔍 Classify Genre", use_container_width=True):
 
         with st.spinner("Classifying..."):
             vectorized = vectorizer.transform([text_input])
-            prediction = model.predict(vectorized)[0]
+            prediction = label_encoder.inverse_transform(model.predict(vectorized))[0]
 
             try:
                 proba = model.predict_proba(vectorized)[0]
