@@ -1,8 +1,8 @@
 # 📚 Book Genre Classifier
 
 A machine learning web application that predicts a book's genre from its title and description.
-NOTE : This project presents the development and deployment of an automated book genre
-      classification web application, built as part of the Introduction to AI certification program.
+ This project presents the development and deployment of an automated book genre
+ classification web application, built as part of the Introduction to AI certification program.
 
 ## Features
 
